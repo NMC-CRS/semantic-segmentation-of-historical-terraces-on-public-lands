@@ -69,7 +69,7 @@ It calls the `set_lr_parameters.py` script to set the learning rate of the model
 
 When all of these pre-processing steps are done, the script created a ****filename*** variable and prints it to the Console. This variable holds the name that will be used to save weights if necessary, as well as to create prediction maps in the 3rd step of the workflow. This name holds a lot of information in a specific order, which can be automatically parsed:
 
-UNet_{backbone}_{n_epochs}ep_{buffer_size}m_{loss_fun}_{batch_size}bs_{lr_type}_{vis1}_{vis2}_{vis3}_{threshold}Thresh_{im_size}_{time_stamp}
+`UNet_{backbone}_{n_epochs}ep_{buffer_size}m_{loss_fun}_{batch_size}bs_{lr_type}_{vis1}_{vis2}_{vis3}_{threshold}Thresh_{im_size}_{time_stamp}`
 
 * **model_structure**: "UNet"
 * **backbone**: The pre-trained backbone structure (can be "VGG16", "VGG19", or "ResNet18")
