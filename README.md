@@ -45,6 +45,47 @@ We then used the `tile_raster_from_grid.py` script to tile each of our visualiza
 
 Similarly, we tiled the annotation mask using the same grids. The resulting tiles were placed in target folders with names that reflected their size and the buffer size around the objects. For example, the 256x256 tiles from the map with 20m buffers around terraces were saved in a folder called **Target_20m_256** within the **Terrace_masks** subfolder of **CNN_input**.
 
+### Train a model
+This step relied mainly on the `unet_main_script.py` script, which calls a lot of the different other scripts.
+
+In general, `unet_main_script.py` calls `calc_mask_perc.py` to determine which mask tiles overlap with at least one object (i.e., which tile has some pixels with value = 1). This part allows setting a pre-processing threshold which is used to ignore any mask tile with less positive pixels than that threshold. This prevents training on tiles that have only very small fractions of the object to detect. This defines a list of tiles that will be used in the training/validation/testing of the model. Tiles without object are completely ignored in this step.
+
+Then, the script calls the `separate_datasets.py` script to separate the tiles into training/validation/testing datasets. The separation can be done randomly (80% training/10% validation/10% testing) or based on geographical bounds provided by the user. In our case, we used the geographic separation to use any tile above latitude 3659650 for training and those below for testing.
+
+After separating datasets, the script defines the data formatting and data loading workflow, which uses functions found in the `dset_rgb.py` and `transformations_rgb.py` scripts. 
+
+The script then imports the pre-trained backbone chosen by the user (VGG16, VGG19, or ResNet18), which calls the appropriate script in the **unet_backbone** folder. It calls the `set_lr_parameters.py` script to set the learning rate of the model parameters that will learn to a starting rate of 0.001 and set learning rate of the frozen parameters to 0. It also calls the `loss-functions.py` script which defines the loss function used to improve training.
+
+When all of these pre-processing steps are done, the script created a ****filename*** variable and prints it to the Console. This variable holds the name that will be used to save weights if necessary, as well as to create prediction maps in the 3rd step of the workflow. This name holds a lot of information in a specific order, which can be automatically parsed:
+
+UNet_{backbone}_{n_epochs}ep_{buffer_size}m_{loss_fun}_{batch_size}bs_{lr_type}_{vis1}_{vis2}_{vis3}_{threshold}Thresh_{im_size}_{time_stamp}
+
+* **model_structure**: "UNet"
+* **backbone**: The pre-trained backbone structure (can be "VGG16", "VGG19", or "ResNet18")
+* **n_epochs**: The number of times the model sees all the training tiles
+* **buffer_size**: The size of the buffer around the annotated object
+* **loss_fun**: The loss function used to improve the model (can be "focal", "dice", or "iou")
+* **batch_size**: The number of training tiles fed to the model at the same time
+* **lr_type**: If the learning rate is stable at 0.001 or if it changes when validation loss stagnates
+* **vis1**: The name of the first visualization used
+* **vis2**: The name of the second visualization used
+* **vis3**: The name of the third visualization used
+* **threshold**: Post-processing threshold (for 3rd step) that will automatically remove predicted objects smaller than this given value
+* **im_size**: Size (height and width) of the training tiles
+* **time_stamp**: Unique time stamp that ensures trainings run with the same parameters will not overwrite previous runs
+
+Therefore, the filename ***UNet_VGG16_20ep_5m_iou_8bs_lrVariable_SLRM20m_SLRM10m_Slope_100Thresh_256_1709159091*** tells me that this training was done using **VGG16** pre-trained weights and **IoU** loss. The learning rate of the model changed when validation loss started stagnating. The model was trained on **256x256 pixel** images that combined **SLRM 20m**, **SLRM 10m**, and **Slope** visualizations fed in batches of **8 images**. The mask tiles used to teach the model were from **5m** buffers around the annotated terrace lines. Finally, this training was done over **20 epochs**.
+
+At that point, the script calls its `train_model` functions, which loads the training tiles, pre-processes them by combining the 3 visualizations into a 3-band tile and using augmentations of it and its associated mask. It compares its predictions to the actual masks to compute the loss, and goes back through its parameters to update their weights in order to diminish that loss. It then loads the validation tiles and pre-processes them (no augmentation for validation tiles, however) and runs them through the model to compute validation metrics. The `train_model` function does this loop for as many epochs as provided by the user.
+
+Finally, the script calls its `test_model` function, which runs the testing dataset through the trained model and computes metrics from it. If the user has decided to save the weights of that model, this is done after that step.
+
+#### Metrics calculated
+In these scripts, we calculate the same metrics for training, validation, and testing datasets:
+* **Recall**: The ratio of true presence pixels that are correctly predicted by the model
+* **Precision**: The ratio of predicted pixels that are true presence
+* **F1 score**: The harmonic mean of recall and precision
+
 ## Support
 For support, contact one of the authors of this repository (see below) or open an issue.
 
