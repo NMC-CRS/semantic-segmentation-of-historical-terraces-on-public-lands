@@ -26,9 +26,9 @@ import numpy as np
 from torchvision import transforms
 
 # Import helper functions already created
-from utils.unet_main_script import import_backbone
-from utils.separate_datasets import separate_dataset
-from utils import calculate_metrics
+from unet_main_script import import_backbone
+from separate_datasets import separate_dataset
+import calculate_metrics
 
 # Define which device to use based on the computer
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
