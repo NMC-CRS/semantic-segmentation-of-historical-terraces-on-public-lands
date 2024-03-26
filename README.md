@@ -2,7 +2,7 @@
 ## Description
 This repository holds the code we used for our study of historical cotton terraces within the Piedmont National Wildlife Refuge (PNWR), Georgia, USA
 
-[Location of PNWR](docs/Figure_1_PNWR.jpg)
+![Location of PNWR](docs/Figure_1_PNWR.jpg)
 
 The scripts allows training a UNet that can take 3 different pre-trained backbones (VGG16, VGG19, and ResNet18)
 
@@ -39,7 +39,7 @@ The scripts included in the **utils** folder cover the 3 main steps of the workf
 2. Train a model
 3. Apply a trained model to new data
 
-[Workflow](docs/Figure_2_flowchart.jpg)
+![Workflow](docs/Figure_2_flowchart.jpg)
 
 ### Create training tiles
 To create our training dataset, we first created different visualization maps from our LiDAR-derived DTM. Those maps covered the whole area of the Piedmont National Wildlife Refuge (PNWR). We also annotated the presence of terraces in QGIS, and transformed those annotations into a raster map where 0 represents the background and 1 represents buffers around terraces.
@@ -61,7 +61,7 @@ After separating datasets, the script defines the data formatting and data loadi
 
 The script then imports the pre-trained backbone chosen by the user (VGG16, VGG19, or ResNet18), which calls the appropriate script in the **unet_backbone** folder. 
 
-[Backbones](docs/Figure_3_backbones.jpg)
+![Backbones](docs/Figure_3_backbones.jpg)
 
 It calls the `set_lr_parameters.py` script to set the learning rate of the model parameters that will learn to a starting rate of 0.001 and set learning rate of the frozen parameters to 0. It also calls the `loss-functions.py` script which defines the loss function used to improve training.
 
@@ -100,14 +100,14 @@ This step relies mainly on the `apply_pretrained_model_to_new_data.py` script. T
 
 In general, the `apply_pretrained_model_to_new_data.py` script's `main` functions load the pre-trained weights to the appropriate model structure, and then run the new tiles through that model to produce predictions for each of those tiles. The tiles containing predictions are saved as geotiffs in a folder within the **Model_predictions** subfolder of **CNN_output**. That folder is named after the ***filename***. The script then merges all those predicted tiles into one big raster, which is saved (with the same ***filename***) in **Model_predictions**. Finally, the script vectorizes that raster so that all adjacent positive pixels are grouped into polygons and saves it as an ESRI shapefile (with the same ***filename***). If an annotation shapefile and a post-processing threshold value are given, the script then deletes polygons with an area smaller than the provided threshold and then uses the overlap between the predicted polygons and the annotated polygons to compute **recall**, **precision**, and **F1 score** of objects rather than pixels.
 
-[Post-processing and object-by-object metrics](docs/Figure_5_postprocessing.jpg)
+![Post-processing and object-by-object metrics](docs/Figure_5_postprocessing.jpg)
 
 ***IMPORTANT NOTE***: To be able to apply a pretrained model to new data, you need to make sure that the new data is in the same format as the trained data (visualization and tile sizes). The new data should also be stored in the same file structure as shown above, as the model uses hard-coded relative paths and variable names to find those folders. 
 
 ## Results
 For our research, when we applied the best trained model to the whole area of the PNWR, we were able to correctly predict ~98% of annotated terraces.
 
-[Predictions of the whole PNWR](docs/Figure_6_Full_map.jpg)
+![Predictions of the whole PNWR](docs/Figure_6_Full_map.jpg)
 
 ## Support
 For support, contact one of the authors of this repository (see below) or open an issue.
