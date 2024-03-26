@@ -50,6 +50,8 @@ We then used the `tile_raster_from_grid.py` script to tile each of our visualiza
 
 Similarly, we tiled the annotation mask using the same grids. The resulting tiles were placed in target folders with names that reflected their size and the buffer size around the objects. For example, the 256x256 tiles from the map with 20m buffers around terraces were saved in a folder called **Target_20m_256** within the **Terrace_masks** subfolder of **CNN_input**.
 
+![Example of 256x256 tiles](docs/Figure_3_visualizations.jpeg)
+
 ### Train a model
 This step relied mainly on the `unet_main_script.py` script, which calls a lot of the different other scripts.
 
@@ -61,7 +63,7 @@ After separating datasets, the script defines the data formatting and data loadi
 
 The script then imports the pre-trained backbone chosen by the user (VGG16, VGG19, or ResNet18), which calls the appropriate script in the **unet_backbone** folder. 
 
-![Backbones](docs/Figure_3_backbones.jpg)
+![Backbones](docs/Figure_4_backbones.jpg)
 
 It calls the `set_lr_parameters.py` script to set the learning rate of the model parameters that will learn to a starting rate of 0.001 and set learning rate of the frozen parameters to 0. It also calls the `loss-functions.py` script which defines the loss function used to improve training.
 
