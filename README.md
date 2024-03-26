@@ -5,10 +5,11 @@ This repository holds the code we used for our study of historical cotton terrac
 The scripts allows training a UNet that can take 3 different pre-trained backbones (VGG16, VGG19, and ResNet18)
 
 ## Installation
-The scripts included here require Python 3.10 maximum. It also uses the following packages: `pandas`, `rasterio`, `shapely`, `geopandas`, `matplotlib`, `scikit-learn`, `scikit-image`, `tensorboard`, `torch_snippets`, `albumentations`, `torchmetrics`, `pycocotools`, and `tifffile`.
+The scripts included here require Python 3.10 maximum. This workflow uses the following packages: `pandas`, `rasterio`, `shapely`, `geopandas`, `matplotlib`, `scikit-learn`, `scikit-image`, `tensorboard`, `torch_snippets`, `albumentations`, `torchmetrics`, `pycocotools`, and `tifffile`.
 
 ## File organization
 These scripts require this specific file organization of input and output folders, as it uses hard-coded relative paths that follow this structure:
+
 ```bash
 ├── CNN_data
 │   ├── CNN_input
@@ -31,7 +32,7 @@ where:\
 `[buffer_size]` is the buffer around the annotated object, **without spaces** (e.g., *10m*)
 
 ## Workflow
-The scripts included in the utils folder cover the 3 main steps of the workflow we used, which are described in more details below:
+The scripts included in the **utils** folder cover the 3 main steps of the workflow we used, which are described in more details below:
 1. Create training tiles
 2. Train a model
 3. Apply a trained model to new data
@@ -86,12 +87,18 @@ In these scripts, we calculate the same metrics for training, validation, and te
 * **Precision**: The ratio of predicted pixels that are true presence
 * **F1 score**: The harmonic mean of recall and precision
 
+### Apply a trained model to new data
+This step relies mainly on the `apply_pretrained_model_to_new_data.py` script. This script has two `main` functions: `main_without_metrics` can be used to apply on new data where we do not have any annotated objects to compare the predictions to (so, new data completely), whereas `main_with_metrics` can be used to apply the trained model on the full map used to train it, for which we may have object annotations already. The latter uses functions from `calculate_metrics.py` to calculate metrics between the model predictions and a provided shapefile of annotations.
+
+In general, the `apply_pretrained_model_to_new_data.py` script's `main` functions load the pre-trained weights to the appropriate model structure, and then run the new tiles through that model to produce predictions for each of those tiles. The tiles containing predictions are saved as geotiffs in a folder within the **Model_predictions** subfolder of **CNN_output**. That folder is named after the ***filename***. The script then merges all those predicted tiles into one big raster, which is saved (with the same ***filename***) in **Model_predictions**. Finally, the script vectorizes that raster so that all adjacent positive pixels are grouped into polygons and saves it as an ESRI shapefile (with the same ***filename***). If an annotation shapefile and a post-processing threshold value are given, the script then deletes polygons with an area smaller than the provided threshold and then uses the overlap between the predicted polygons and the annotated polygons to compute **recall**, **precision**, and **F1 score** of objects rather than pixels.
+
+***IMPORTANT NOTE***: To be able to apply a pretrained model to new data, you need to make sure that the new data is in the same format as the trained data (visualization and tile sizes). The new data should also be stored in the same file structure as shown above, as the model uses hard-coded relative paths and variable names to find those folders. 
+
 ## Support
 For support, contact one of the authors of this repository (see below) or open an issue.
 
 ## Authors and acknowledgment
-**Authors:**
-
+**Authors:**\
 Claudine Gravel-Miguel, PhD\
 Grant Snitker, PhD\
 Katherine Peck, MA
