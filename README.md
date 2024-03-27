@@ -109,8 +109,6 @@ In general, the `apply_pretrained_model_to_new_data.py` script's `main` function
 ## Results
 For our research, when we applied the best trained model to the whole area of the PNWR, we were able to correctly predict ~98% of annotated terraces.
 
-![Predictions of the whole PNWR](docs/Figure_6_Full_map.jpg)
-
 ## Support
 For support, contact one of the authors of this repository (see below) or open an issue.
 
