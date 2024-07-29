@@ -11,16 +11,21 @@ This script defines the transformations done on images, using the albumentation 
 import albumentations as A
     
 def train_augmentation(im_size):
-    """
-    Defines the transform that will be apply to the training data during the data loading workflow
-    
-        Parameters:
-            im_size (int): The size of the width/height of training tiles, to resize to them after transformation
+    '''
+    Performs transformations on uploaded images. Each transformations has a certain probability of happening.
+    The transformations are done one after the other, on the array resulting from the previous transformation (if transformed)
 
-        Returns:
-            A.Compose (Albumentation function): Function that runs the defined transformations
+    Parameters
+    ----------
+    im_size : int
+        Size of the input (height or width).
 
-    """
+    Returns
+    -------
+    Albumentation Compose workflow
+        The workflow that actually runs the images through the transformation when they are loaded to the model.
+
+    '''
     
     train_transform = [ 
         A.OneOf([
