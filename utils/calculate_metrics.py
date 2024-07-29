@@ -3,7 +3,7 @@
 """
 Created on Wed Dec 20 2023
 
-@author: Katherine Peck
+@authors: Katherine Peck and Claudine Gravel-Miguel
 
 This script holds functions that vectorize the predicted presence pixels, 
 do some post-processing cleaning by removing polygons that are smaller than a provided threshold,
@@ -22,15 +22,21 @@ from shapely.geometry import shape
 import numpy as np
 
 def vectorize(rasterpath):
-    """
+    '''
     Given a binary raster, return a geodataframe of polygons for every pixel with a value of 1
 
-        Parameters:
-            rasterpath (str): binary raster filepath
+    Parameters
+    ----------
+    rasterpath : str
+        binary raster filepath.
 
-        Returns:
-            features_gdf (GeoDataFrame): geopandas gdf of polygons    
-    """
+    Returns
+    -------
+    features_gdf : GeoDataFrame
+        geopandas gdf of polygons.
+
+    '''
+    
     # Open raster 
     with rasterio.open(rasterpath) as src:
         data = np.float32(src.read())
@@ -67,20 +73,28 @@ def vectorize(rasterpath):
     return features_gdf
 
 # Define the main helper function, which also calls vectorize() (defined above)
-def compute_metrics(path_to_shp, path_to_ras, threshold):
-    """
+def compute_object_metrics(path_to_shp, pred_poly, threshold):
+    '''
     Given a shapefile of actual features, a raster of predicted features,
     and an integer threshold for feature size, prints the recall, precision, and F1 values.
 
-        Parameters:
-            path_to_shp (str): filepath for shapefile of actual features
-            path_to_ras (str): filepath for raster of detected features
-            threshold (int): integer for max size of features to be removed from the predicted features
-    """
+    Parameters
+    ----------
+    path_to_shp : str
+        filepath for shapefile of actual features.
+    pred_poly : GeoPandas vector
+        Imported shapefile of predicted polygons (can be bounding boxes for Mask and Faster RCNN).
+    threshold : int
+        integer for max size of features to be removed from the predicted features.
+
+    Returns
+    -------
+    None.
+
+    '''
 
     # Read in shapefile of predicted features
     actual = gpd.read_file(path_to_shp)
-    pred_poly = vectorize(path_to_ras)
 
     # Filter out the smaller polygons using input area threshold
     pred_poly = pred_poly[pred_poly.area > threshold]
@@ -101,10 +115,9 @@ def compute_metrics(path_to_shp, path_to_ras, threshold):
     print("FN: " + str(FN))
 
     FP = 0
-    
-    # For all shapes in the gdf of predicted polygons
+    #For all shapes in the gdf of predicted polygons
     for pred_geom in pred_poly.geometry:
-        # if a polygon does not intersect a feature in the actual shapefile, it is a false positive
+        #if a polygon does not intersect a feature in the actual shapefile, it is a false positive
         overlap = any(pred_geom.intersects(actual_geom) for actual_geom in actual.geometry)
         if not overlap:
             FP += 1
@@ -112,30 +125,37 @@ def compute_metrics(path_to_shp, path_to_ras, threshold):
     print("FP: " + str(FP))
 
     # CALCULATE AND PRINT METRICS
-    recall = TP / (TP + FN)
-    precision = TP / (TP + FP)
-    F1 = (2 * recall * precision) / (recall + precision)
+    recall = TP / (TP + FN + 0.00001)
+    precision = TP / (TP + FP + 0.00001)
+    F1 = (2 * recall * precision) / (recall + precision + 0.00001)
 
     print("Recall:", round(recall, 3))
     print("Precision:", round(precision, 3))
     print("F1:", round(F1, 3))
 
-# Define an alternate helper function, which saves metrics to a list
+#Define an alternate helper function, which saves metrics to a list
 def save_metrics(path_to_shp, path_to_ras, threshold):
-    """
+    '''
     Given a shapefile of actual features, a raster of predicted features,
-    and an integer threshold for feature size, returns the recall, precision, and F1 values.
+    and an integer threshold for feature size, returns the recall, precision, F1- score and MCC values.
 
-        Parameters:
-            path_to_shp (str): filepath for shapefile of actual features
-            path_to_ras (str): filepath for raster of detected features
-            threshold (int): integer for max size of features to be removed from the predicted features
+    Parameters
+    ----------
+    path_to_shp : str
+        filepath for shapefile of actual features.
+    path_to_ras : str
+        filepath for raster of detected features.
+    threshold : int
+        integer for max size of features to be removed from the predicted features.
 
-        Returns:
-            metrics (list): list of metrics in the order [recall, precision, f1]
-    """
-    
-    # Read in shapefile of predicted features
+    Returns
+    -------
+    metrics : list
+        list of metrics in the order [recall, precision, f1, MCC].
+
+    '''
+
+    #Read in shapefile of predicted features
     actual = gpd.read_file(path_to_shp)
     print("Read the Shapefile")
     
@@ -152,8 +172,8 @@ def save_metrics(path_to_shp, path_to_ras, threshold):
     TP = 0
     FN = 0
     for actual_geom in actual.geometry:
-        # If a shape in the predicted file intersects a shape in the actual file, it's a true positive
-        # Otherwise, it's a true negative
+        #If a shape in the predicted file intersects a shape in the actual file, it's a true positive
+        #Otherwise, it's a true negative
         overlap = any(actual_geom.intersects(pred_geom) for pred_geom in pred_poly.geometry)
         if overlap:
             TP += 1
@@ -161,9 +181,8 @@ def save_metrics(path_to_shp, path_to_ras, threshold):
             FN += 1
 
     print(f"TP: {TP}, and FN: {FN}")
-    
     FP = 0
-    # For all shapes in the gdf of predicted polygons
+    #For all shapes in the gdf of predicted polygons
     for pred_geom in pred_poly.geometry:
         #if a polygon does not intersect a feature in the actual shapefile, it is a false positive
         overlap = any(pred_geom.intersects(actual_geom) for actual_geom in actual.geometry)
@@ -171,7 +190,6 @@ def save_metrics(path_to_shp, path_to_ras, threshold):
             FP += 1
 
     print(f"FP: {FP}")
-    
     # CALCULATE AND PRINT METRICS
     recall = TP / (TP + FN)
     precision = TP / (TP + FP)
@@ -180,4 +198,40 @@ def save_metrics(path_to_shp, path_to_ras, threshold):
     metrics = [recall, precision, F1]
     return metrics
 
+def calculate_mcc(merged_ras):
+    '''
+    This takes a numpy array with specific values associated with TP, TN, FP, and FN, and calculates the basic metrics and MCC on pixels.
+
+    Parameters
+    ----------
+    merged_ras : array
+        The merged raster of annotated and predicted features, where values from the confusion matric (TP, FP, TN, FN) have specific values.
+
+    Returns
+    -------
+    None.
+
+    '''
+    
+    # Calculate the confusion matrix
+    
+    TP = sum(merged_ras[merged_ras == 12])
+    TN = sum(merged_ras[merged_ras == 6])
+    FP = sum(merged_ras[merged_ras == 7])
+    FN = sum(merged_ras[merged_ras == 11])
+    
+    recall = TP / (TP + FN)
+    precision = TP / (TP + FP)
+    F1 = (2 * recall * precision) / (recall + precision)
+    MCC = (TP*TN-FP*FN)/np.sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
+    
+    print("These values are calculated on ALL raster pixels of the given maps. If the rasters had a lot of NA values around, those might not be representative.")
+    print(f"TP: {TP}")
+    print(f"FP: {FP}")
+    print(f"TN: {TN}")
+    print(f"FN: {FN}")
+    print(f"Recall: {round(recall, 3)}, Precision: {round(precision, 3)}, F1: {round(F1, 3)}, and MCC: {round(MCC, 3)}")
+    
+    return
+    
 # THE END
