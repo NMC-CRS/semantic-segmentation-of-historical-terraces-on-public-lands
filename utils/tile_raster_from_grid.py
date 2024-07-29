@@ -25,16 +25,20 @@ import os
 from skimage.io import imread
 
 def format_grid(path_to_shp):
-    """
+    '''
     This imports and formats a shapefile grid so it can be used by later code
 
-        Parameters:
-            path_to_shp (string): Path to the hsapefile grid created in QGIS or Python
-            
-        Returns:
-            grid (DataFrame): geopanda DataFrame with bottom left coordinates of each polygon
+    Parameters
+    ----------
+    path_to_shp : str
+        Path to the shapefile grid created in QGIS or Python.
 
-    """
+    Returns
+    -------
+    grid : GeoDataFrame
+        Geopandas dataframe with the geometry of the grid (bottom left coordinates of each polygon).
+
+    '''
     
     # Import the grid shapefile
     grid = gpd.read_file(path_to_shp)
@@ -47,37 +51,68 @@ def format_grid(path_to_shp):
     
 
 def scale_floats(array):
-    """
+    '''
     Inputs for the ML process need to be in floats between 0-1
     This takes a numpy array and returns a 0-1 scaled version
 
-        Parameters:
-            array (NumPy array): numpy array representing the raster image post-SLRM
-            
-        Returns:
-            scaled (NumPy array): numpy array of floats with scaled values
+    Parameters
+    ----------
+    array : NumPy array
+        numpy array representing the raster image post-SLRM.
 
-    """
+    Returns
+    -------
+    scaled : NumPy array
+        numpy array of floats with scaled values.
+
+    '''
     
-    scaled = (array-np.min(array))/(np.max(array)-np.min(array))
+    # Min value in the array (ignoring NAs)
+    array_min = np.nanmin(array)
+    
+    # Moving all values so that the minimum is 0
+    array_to_zero = array - array_min
+    
+    # New max value in the array (ignoring NAs). Replacing its value with a tiny value if it is 0.
+    array_max = np.nanmax(array_to_zero)
+    if array_max == 0:
+        array_max = 0.00001
+    
+    # Divide the array values by its max to constraint values to 0-1
+    scaled = array_to_zero/array_max
+    
     return scaled
 
 
 def tile_from_grid(bigraster, path_to_grid, outfolder, tile_size, is_mask, drop_nan):
-    """
+    '''
     Extract rasters by the mask of the grid and save as GeoTiffs
 
-        Parameters:
-            bigraster (str): filepath of raster to be tiled
-            path_to_grid (str): filepath to shapefile grid used to define the tiles
-            outfolder (str): filepath for output folder
-            tile_size (int): desired tile height and width
-            is_mask (boolean): If the raster is a mask of annotated objects (True) or not (False)
-            drop_nan (boolean): If the user wants to drop any tile that has NA values or keep them (but replace NA with 0s)
-        
-        Returns:
-            Nothing
-    """
+    Parameters
+    ----------
+    bigraster : str
+        filepath of raster to be tiled.
+    path_to_grid : GeoDataFrame
+        geopandas gpd of output tile shapes.
+    outfolder : str
+        filepath for output folder.
+    tile_size : int
+        desired tile height and width.
+    is_mask : bool
+        If the raster tiled is a mask (in which case, it does not get rescaled to 0-1).
+    drop_nan : bool
+        If we want to drop any tile with nan value or keep them but transform nan to 0.
+
+    Raises
+    ------
+    Exception
+        Raise an exception if there is a disconnect between the tile_size provided and the resulting tiles' size (likely due to resolution).
+
+    Returns
+    -------
+    None.
+
+    '''
     
     # Check if the outfolder already exists, and create a new one if it does not.
     isExist = os.path.exists(outfolder)
@@ -146,17 +181,21 @@ def tile_from_grid(bigraster, path_to_grid, outfolder, tile_size, is_mask, drop_
     return
         
 def check_tile_size(outfolder, tile_size):
-    """
-    Compare the size of one created tile (in pixels) with the tile_size provided to make sure they are the same.
-    This is a saveguard to prevent errors created when working with resolutions other then 1m/pixel.
+    '''
+    Check the size of the tiles created against the value entered
 
-        Parameters:
-            outfolder (str): filepath of the folder where the tiles were saved
-            tile_size (int): desired tile height and width
-        
-        Returns:
-            Nothing, but it may print a warning statement if there is a discrepancy
-    """
+    Parameters
+    ----------
+    outfolder : str
+        Path to the folder that holds the created tiles.
+    tile_size : int
+        Size wanted for the tile.
+
+    Returns
+    -------
+    None.
+
+    '''
     
     # Create a list of the tiles' names
     filelist = os.listdir(outfolder)
