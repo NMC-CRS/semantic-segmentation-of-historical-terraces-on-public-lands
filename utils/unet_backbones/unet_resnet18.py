@@ -15,16 +15,23 @@ from torchvision.models import resnet18
 from torchvision.models import ResNet18_Weights
 
 def double_conv(in_channels, out_channels):
-    """
-    Defines the steps of the double convolutions layers
+    '''
+    Structure of a double convolution to simplify the code below
+    Each convolution is followed by a batch normalization and a ReLU function
 
-        Parameters:
-            in_channels (int): The number of channels of the input
-            out_channels (int): The number of channels produced by the convolution
+    Parameters
+    ----------
+    in_channels : int
+        The number of channels (dimension) of the input.
+    out_channels : int
+        The number of channels (dimension) of the output.
 
-        Returns:
-            Sequential (Pytorch function): A function that runs the input through the different steps sequentially
-    """
+    Returns
+    -------
+    Neural network sequential object
+        The sequence of transformations done on the input to creat the output.
+
+    '''
     
     return nn.Sequential(
         # First convolution, using 3x3 kernel with stride 1 and padding 1
@@ -42,16 +49,22 @@ def double_conv(in_channels, out_channels):
     )
 
 def up_samp(in_channels, out_channels):
-    """
-    Defines the step of the upsample (which is a convolutional transposition). This is used in the decoder to return the image to its original shape.
+    '''
+    Structure of the up sampling to go from more dimensions to less dimensions
 
-        Parameters:
-            in_channels (int): The number of channels of the input
-            out_channels (int): The number of channels produced by the convolution
+    Parameters
+    ----------
+    in_channels : int
+        The number of channels (dimension) of the input.
+    out_channels : int
+        The number of channels (dimension) of the output.
 
-        Returns:
-            Sequential (Pytorch function): A function that runs the input through the different steps sequentially
-    """
+    Returns
+    -------
+    Neural network sequential object
+        The sequence of transformations done on the input to creat the output.
+
+    '''
     
     return nn.Sequential(
         nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2),
@@ -59,17 +72,6 @@ def up_samp(in_channels, out_channels):
     )
 
 class UNet(nn.Module):
-    """
-    A Pytorch module that defines the steps of the UNet structure (encoder and decoder)
-
-        Parameters:
-            in_channels (int): The number of channels of the input
-            out_channels (int): The number of channels produced by the convolution
-
-        Returns:
-            x (Pytorch tensor): The tensor of predicted segmentations
-    """
-    
     def __init__(self, pretrained=True, num_classes=2):
         super().__init__()
 
