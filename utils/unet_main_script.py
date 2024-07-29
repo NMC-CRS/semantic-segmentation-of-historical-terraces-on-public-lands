@@ -38,16 +38,21 @@ import set_lr_parameters as setlr
     
 def import_backbone(backbone):
     
-    """
+    '''
     This imports the appropriate backbone structure as the variable UNet. 
     Each structure is in a different python script, so this finds the right file to import.
-    
-        Parameters:
-            backbone (str): The name of the backbone to use
-        Returns:
-            UNet (Pytorch model): The UNet model structure
 
-    """
+    Parameters
+    ----------
+    backbone : str
+        The name of the backbone to use.
+
+    Returns
+    -------
+    UNet : Pytorch model
+        The UNet model structure.
+
+    '''
 
     if backbone == "VGG16":
         from unet_backbones.unet_vgg16 import UNet
@@ -59,27 +64,38 @@ def import_backbone(backbone):
     return UNet
 
 def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterion, new_optimizer, writer):
-    
-    """
+    '''
     This iterates through the epochs to:
-        Run the training dataset (image and targets) through the model in batches, and computes metrics on the model predictions.
-        Use the difference between the predictions and the actual targets to adjust the weights of the model nodes.
-        Run the validation dataset (image and targets) through the model in batches and computes metrics here as well.
-    
-        Parameters:
-            model (PyTorch model): The model structure being trained
-            n_epochs (int): Number of epochs to train the model. The model sees all the training images in each epoch.
-            loss_fun (str): The name of the loss function that is used to optimize the model training
-            lr_variable (boolean): If the learning rate is updating when val_loss stagnates (True) or kept constant at 0.001 (False)
-            trn_dl (Pytorch Dataloader): The workflow through which the training images and their targets go through when passed to the model
-            val_dl(Pytorch Dataloader): The workflow through which the validation images and their targets go through when passed to the model
-            criterion (function): A function that defined which function to use based on the loss_function chosen. This calculates the loss.
-            new_optimizer (Pytorch optimizer): Optimizer of the parameters that are learning, which gets updated during training
-            writer (boolean): If True, the code creates a Tensorboard file and log metrics to it.
-        Returns:
-            Nothing
+        * Run the training dataset (image and targets) through the model in batches, and computes metrics on the model predictions.
+        * Use the difference between the predictions and the actual targets to adjust the weights of the model nodes.
+        * Run the validation dataset (image and targets) through the model in batches and computes metrics here as well.
 
-    """
+    Parameters
+    ----------
+    model : PyTorch model
+        The model structure being trained.
+    n_epochs : int
+        Number of epochs to train the model. The model sees all the training images in each epoch..
+    loss_fun : str
+        The name of the loss function that is used to optimize the model training.
+    lr_variable : bool
+        If the learning rate is updating when val_loss stagnates (True) or kept constant at 0.001 (False).
+    trn_dl : Pytorch Dataloader
+        The workflow through which the training images and their targets go through when passed to the model.
+    val_dl : Pytorch Dataloader
+        The workflow through which the validation images and their targets go through when passed to the model.
+    criterion : function
+        A function that defined which function to use based on the loss_function chosen. This calculates the loss..
+    new_optimizer : PyTorch optimizer
+        Optimizer of the parameters that are learning, which gets updated during training.
+    writer : bool
+        If True, the code creates a Tensorboard file and log metrics to it..
+
+    Returns
+    -------
+    None.
+
+    '''
     
     # Set up the lr scheduler to update if the val_loss stagnates for more than 2 epochs.
     if lr_variable:
@@ -88,7 +104,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
     # Record the time before training starts to calculate how long training took.
     start_time = datetime.now()
     
-    # To follow progress
+    # To follow up progress
     log = Report(n_epochs)
     
     # Iterate through for each epoch
@@ -105,12 +121,14 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
         total_train_precision = 0
         total_train_f1 = 0
         total_train_acc = 0
+        total_train_mcc = 0
         
         total_val_loss = 0
         total_val_recall = 0
         total_val_precision = 0
         total_val_f1 = 0
         total_val_acc = 0
+        total_val_mcc = 0
         
         # Iterate through each training batch
         for batch, data in enumerate(trn_dl):
@@ -123,7 +141,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
             new_optimizer.zero_grad()
             
             # Compute the metrics
-            loss, acc, recall, precision, f1 = criterion(_masks, ce_masks, loss_fun)
+            loss, acc, recall, precision, f1, mcc = criterion(_masks, ce_masks, loss_fun)
             
             # Add up the batches' metrics
             total_train_loss += loss.item()
@@ -131,6 +149,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
             total_train_precision += precision.item()
             total_train_f1 += f1.item()
             total_train_acc += acc.item()
+            total_train_mcc += mcc.item()
     
             # Go backward through the model and update the weights
             loss.backward()
@@ -145,6 +164,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
         tr_recall = total_train_recall/N_batch
         tr_precision = total_train_precision/N_batch
         tr_f1 = total_train_f1/N_batch
+        tr_mcc = total_train_mcc/N_batch
         
         # If save_weights, write metrics to Tensorboard file
         if writer is not None:
@@ -153,6 +173,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
             writer.add_scalar("Precision/train", tr_precision, current_epoch)
             writer.add_scalar("F1/train", tr_f1, current_epoch)
             writer.add_scalar("Accuracy/train", tr_acc, current_epoch)
+            writer.add_scalar("MCC/train", tr_mcc, current_epoch)
     
         # Set the model on Evaluation mode
         model.eval()
@@ -166,7 +187,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
                 _masks = model(ims)
                 
                 # Compute metrics
-                loss, acc, recall, precision, f1 = criterion(_masks, masks, loss_fun)
+                loss, acc, recall, precision, f1, mcc = criterion(_masks, masks, loss_fun)
                 
                 # To follow progress (print values to Console as they get updated)
                 log.record(epoch+(batch + 1)/N_batch, val_loss=loss.item(), end='\r')
@@ -177,6 +198,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
                 total_val_precision += precision.item()
                 total_val_f1 += f1.item()
                 total_val_acc += acc.item()
+                total_val_mcc += mcc.item()
             
         # For outputs (no need to update at every batch)
         val_loss = total_val_loss/N_batch
@@ -184,6 +206,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
         val_recall = total_val_recall/N_batch
         val_precision = total_val_precision/N_batch
         val_f1 = total_val_f1/N_batch
+        val_mcc = total_val_mcc/N_batch
         
         # If save_weights, write metrics to Tensorboard file
         if writer is not None:
@@ -192,6 +215,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
             writer.add_scalar("Precision/val", val_precision, current_epoch)
             writer.add_scalar("F1/val", val_f1, current_epoch)
             writer.add_scalar("Accuracy/val", val_acc, current_epoch)
+            writer.add_scalar("MCC/val", val_mcc, current_epoch)
         
         # Set up variable to print the lr to Console
         curr_lr = new_optimizer.param_groups[0]['lr']
@@ -204,38 +228,49 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
             log.report_avgs(current_epoch) # Those are averages, not the final value...
         
             print(f'LR: {curr_lr}, time: {time_since_start}')
-            print(f'TRAIN loss: {tr_loss:.3f}, recall: {tr_recall:.3f}, precision: {tr_precision:.3f}, F1: {tr_f1:.3f}, accuracy: {round(tr_acc, 3)}')
-            print(f'VAL loss: {val_loss:.3f}, recall: {val_recall:.3f}, precision: {val_precision:.3f}, F1: {val_f1:.3f}, accuracy: {round(val_acc, 3)}\n')
+            print(f'TRAIN loss: {tr_loss:.3f}, recall: {tr_recall:.3f}, precision: {tr_precision:.3f}, F1: {tr_f1:.3f}, MCC: {tr_mcc:.3f}, accuracy: {round(tr_acc, 3)}')
+            print(f'VAL loss: {val_loss:.3f}, recall: {val_recall:.3f}, precision: {val_precision:.3f}, F1: {val_f1:.3f}, MCC: {val_mcc:.3f}, accuracy: {round(val_acc, 3)}\n')
         
         # Change the learning rate if val_loss plateaus
         if lr_variable:
             scheduler.step(val_loss)
 
-    # Clear the writer's memory
+    # Clears the writer's memory
     if writer is not None:
         writer.flush()
     
     return
 
 def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, inputs_test, targets_test, backbone, batch_size):
-    
-    """
+    '''
     This iterates through the testing dataset (image and targets). It runs them through the trained model in batches, and computes metrics on the model predictions.
-    
-        Parameters:
-            model (PyTorch model): The model structure being trained
-            train_dir_dim1 (str): Path to the tiles of the first visualization.
-            train_dir_dim2 (str): Path to the tiles of the second visualization.
-            train_dir_dim3 (str): Path to the tiles of the third visualization.
-            mask_dir (str): Path to the mask tiles
-            inputs_test (list): List of the filenames of the testing dataset
-            targets_test (list): List of the filenames of the testing dataset (same as inputs_test, but different name here for code clarity)
-            backbone (str): The name of the backbone to use
-            batch_size (int): Number of images that will be uploaded to the model at the same time.
-        Returns:
-            Nothing
 
-    """
+    Parameters
+    ----------
+    model : PyTorch model
+        The model structure being trained.
+    train_dir_dim1 : str
+        Path to the tiles of the first visualization.
+    train_dir_dim2 : str
+        Path to the tiles of the second visualization.
+    train_dir_dim3 : str
+        Path to the tiles of the third visualization.
+    mask_dir : str
+        Path to the mask tiles.
+    inputs_test : list
+        List of the filenames of the testing dataset.
+    targets_test : list
+        List of the filenames of the testing dataset (same as inputs_test, but different name here for code clarity).
+    backbone : str
+        The name of the backbone to use.
+    batch_size : int
+        Number of images that will be uploaded to the model at the same time.
+
+    Returns
+    -------
+    None.
+
+    '''
     
     # Attach the names of each testing tile to its appropriate path
     inputs_test_dim1 = [f'{train_dir_dim1}/{item}' for item in inputs_test] 
@@ -251,6 +286,7 @@ def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, 
     list_recall = []
     list_precision = []
     list_f1 = []
+    list_mcc = []
     
     # Set the model on Evaluation mode
     model.eval()
@@ -268,57 +304,84 @@ def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, 
             mask = mask.squeeze()
     
             # Calculate metrics between predicted and actual
-            recall, precision, f1 = lf.compute_metrics(_mask, mask)
+            recall, precision, f1, mcc = lf.compute_metrics(_mask, mask)
             
             # Get the metrics from device
             recall = recall.detach().cpu()
             precision = precision.detach().cpu()
             f1 = f1.detach().cpu()
+            mcc = mcc.detach().cpu()
             
             # Append the metrics to the lists
             list_recall.append(recall)
             list_precision.append(precision)
             list_f1.append(f1)
+            list_mcc.append(mcc)
 
     # Calculate the mean of the lists
     mean_recall = np.mean(list_recall)
     mean_precision = np.mean(list_precision)
     mean_f1 = np.mean(list_f1)
+    mean_mcc = np.mean(list_mcc)
 
     # Print the results to Console
-    print(f'TEST recall: {mean_recall:.3f}, precision: {mean_precision:.3f}, F1: {mean_f1:.3f}')
+    print(f'TEST recall: {mean_recall:.3f}, precision: {mean_precision:.3f}, F1: {mean_f1:.3f}, MCC: {mean_mcc:.3f}')
     
     return 
 
 def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folder_name, threshold, batch_size, separation_random, train_bounds, n_epochs, loss_fun, log_metrics, save_weights, output_path, lr_variable):
     
-    """
+    '''
     Calls all the functions to load the model structure and its backbone, format the different datasets, train the model, evaluate it, and test it.
-    
-        Parameters:
-            backbone (str): The name of the backbone to use
-            vis1 (str): Name of the first visualization. This is to find the correct folder to upload.
-            vis2 (str): Name of the second visualization. This is to find the correct folder to upload.
-            vis3 (str): Name of the third visualization. This is to find the correct folder to upload.
-            im_size (int): Size of the training tiles' height (or width)
-            buffer_size (int): Buffer size (in meters) around the annotated object. This is to find the correct folder to upload.
-            data_path (str): Path to the CNN_input folder that holds inputs folders as well as the mask subfolder identified in mask_folder_name (see below)
-            mask_folder_name (str): Name of the folder that holds the masks folders. This is to find the correct folder to upload.
-            threshold (int): For pre-processing. This removes any mask images that have less than the threshold's number of positive's values.
-            batch_size (int): Number of images that will be uploaded to the model at the same time.
-            separation_random (boolean): If set to True, the training/validation/testing datasets are separated randomly (80-10-10). If False, they are separated geographically based on train_bounds (see below)
-            train_bounds (list): xmin, ymin, xmax, and ymax around the tiles that will be used for training
-            n_epochs (int): Number of epochs to train the model. The model sees all the training images in each epoch.
-            loss_fun (str): The name of the loss function that is used to optimize the model training
-            log_metrics (boolean): If True, the code creates a Tensorboard file and log metrics to it.
-            save_weights (boolean): If True, the model saves the trained weights to a .pt file.
-            output_path (str): Path to the CNN_output folder in which the predicted tiles, compiled tiff, compiled shapefiles will be saved.
-            lr_variable (boolean): If the learning rate is updating when val_loss stagnates (True) or kept constant at 0.001 (False)
-        Returns:
-            filename (str): Name that is used for weights file, the folder that holds predicted tiles, the compiled geotiff, and the compiled shapefile.
-            inputs_test (list): List of the testing dataset to use to compute object-by-object metrics when weights are saved (done by another script).
+    This function is called by the 02_one_script_to_rule_them_all.py script.
 
-    """
+    Parameters
+    ----------
+    backbone : str
+        Name of the backbone used for training.
+    vis1 : str
+        Name of the first visualization. This is to find the correct folder to upload.
+    vis2 : str
+        Name of the second visualization. This is to find the correct folder to upload.
+    vis3 : str
+        Name of the third visualization. This is to find the correct folder to upload.
+    im_size : int
+        Size of the training tiles' height (or width).
+    buffer_size : int
+        Buffer size (in meters) around the annotated object. This is to find the correct folder to upload.
+    data_path : str
+        Path to the CNN_input folder that holds inputs folders as well as the mask subfolder identified in mask_folder_name (see below).
+    mask_folder_name : str
+        Name of the folder that holds the masks folders. This is to find the correct folder to upload.
+    threshold : int
+        For pre-processing. This removes any mask images that have less than the threshold's number of positive's values.
+    batch_size : int
+        Number of images that will be uploaded to the model at the same time.
+    separation_random : bool
+        If set to True, the training/validation/testing datasets are separated randomly (80-10-10). If False, they are separated geographically based on train_bounds (see below).
+    train_bounds : list
+        xmin, ymin, xmax, and ymax around the tiles that will be used for training.
+    n_epochs : int
+        Number of epochs to train the model. The model sees all the training images in each epoch.
+    loss_fun : str
+        Name of the loss function to optimize (e.g., dice, iou, focal).
+    log_metrics : bool
+        If True, the code creates a Tensorboard file and log metrics to it.
+    save_weights : bool
+        If True, the model saves the trained weights to a .pt file.
+    output_path : str
+        Path to the CNN_output folder in which the predicted tiles, compiled tiff, compiled shapefiles will be saved.
+    lr_variable : bool
+        If the learning rate is updating when val_loss stagnates (True) or kept constant at 0.001 (False).
+
+    Returns
+    -------
+    filename : str
+        Name that is used for weights file, the folder that holds predicted tiles, the compiled geotiff, and the compiled shapefile.
+    inputs_test : list
+        List of the testing dataset to use to compute object-by-object metrics when weights are saved (done by another script).
+
+    '''
     
     # Define the device from the start
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
