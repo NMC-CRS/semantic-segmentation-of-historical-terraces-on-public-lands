@@ -20,17 +20,23 @@ from tifffile import tifffile
 
 def check_outliers(filename, mask_array):
     
-    """
+    '''
     This checks if the tile has any corrupted values (nan, very low and very high values) and keeps a counter of those problems. 
     The counter will be used to stop the script if there are issues instead of feeding problematic tiles to the model training.
 
-        Parameters:
-            filename (string): Name of the ile for printing purposes
-            mask_array (numpy array): Numpy array of the imported tile
-        Returns:
-            error_counter (int): Number of problematic values in the tile
+    Parameters
+    ----------
+    filename : str
+        Name of the file for printing purposes.
+    mask_array : numpy array
+        Numpy array of the imported tile.
 
-    """
+    Returns
+    -------
+    error_counter : int
+        Number of problematic values in the tile.
+
+    '''
     
     # Counts how many problems there are in the tile
     error_counter = 0
@@ -73,16 +79,21 @@ def check_outliers(filename, mask_array):
 
 def log_mask_tiles(mask_dir):
     
-    """
+    '''
     Iterates through all tif files in mask_dir to check if there are problematic values, then count the number of pixels above 0 
     and log that information in a dataframe that will be used in the main script to select only the mask tiles with enough annotated pixels.
 
-        Parameters:
-            mask_dir (string): Path to the folder that contains the mask tiles
-        Returns:
-            mask_dataframe (Pandas dataframe): Dataframe with one row per tile, and three columns (name of the tile, its max value, and the number of pixels with value > 0)
+    Parameters
+    ----------
+    mask_dir : str
+        Path to the folder that contains the mask tiles.
 
-    """
+    Returns
+    -------
+    mask_dataframe : Pandas dataframe
+        Dataframe with one row per tile, and three columns (name of the tile, its max value, and the number of pixels with value > 0).
+
+    '''
     
     # Create empty lists that will be filled within the iterator
     list_filenames = []
