@@ -35,17 +35,24 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def preprocess(image_dim1, image_dim2, image_dim3):
     
-    """
+    '''
     Combine the 3 dimensions provided into a 3D array, transform into a tensor, and format its dimensions appropriately for the model
 
-        Parameters:
-            image_dim1 (numpy array): the first visualization tile imported as numpy array
-            image_dim2 (numpy array): the second visualization tile imported as numpy array
-            image_dim3 (numpy array): the third visualization tile imported as numpy array
+    Parameters
+    ----------
+    image_dim1 : numpy array
+        The first visualization tile imported as numpy array.
+    image_dim2 : numpy array
+        The second visualization tile imported as numpy array.
+    image_dim3 : numpy array
+        The third visualization tile imported as numpy array.
 
-        Returns:
-            im (Pytorch tensor): Tensor of dimensions [B, C, H, W] where B stands for the batch size
-    """
+    Returns
+    -------
+    im : Pytorch tensor
+        Tensor of dimensions [B, C, H, W] where B stands for the batch size.
+
+    '''
     
     # This is a torchvision transform to transform the numpy array into a Pytorch tensor
     tfms = transforms.Compose([
@@ -64,15 +71,20 @@ def preprocess(image_dim1, image_dim2, image_dim3):
 
 def postprocess_UNet(mask):
         
-    """
+    '''
     Transform the tile predicted by the model into a 1 dimension float32 numpy array sent to CPU (for possible visualization in Python and elsewhere)
 
-        Parameters:
-            mask (Pytorch tensor): The tensor of objects prediction created by the model
+    Parameters
+    ----------
+    mask : Pytorch tensor
+        The tensor of objects prediction created by the model.
 
-        Returns:
-            mask (numpy array): Array of dimension [H, W] and float32 type
-    """
+    Returns
+    -------
+    mask : numpy array
+        Array of dimension [H, W] and float32 type.
+
+    '''
     
     # Remove the one-hot encoding
     _max, mask = torch.max(mask, dim=1)
@@ -91,7 +103,7 @@ def postprocess_UNet(mask):
 
 def predict_on_new_tiles(model_structure, model, filename, tilenames, inputs_test_dim1, inputs_test_dim2, inputs_test_dim3, output_path):
     
-    """
+    '''
     Iterate through all the files in the filenames list. For each filename, import the three visualizations as numpy arrays.
     Call functions to format the 3 bands of visualization into a 3D Pytorch
     Run that 3D tensor through the trained model, which creates a prediction tensor
@@ -99,17 +111,30 @@ def predict_on_new_tiles(model_structure, model, filename, tilenames, inputs_tes
     Extract the CRS of one of the input visualization map and assign that CRS profile to the new predicted array.
     Write the georeferenced prediction to a geotiff file.
 
-        Parameters:
-            model (Pytorch model): Pretrained model structure with loaded weights
-            tilenames (list): List of filenames of tiles to run through the model
-            inputs_test_dim1 (str): Name of the first visualization type
-            inputs_test_dim2 (str): Name of the second visualization type
-            inputs_test_dim3 (str): Name of the third visualization type
-            output_path (str): Path to the CNN_output/Model_predictions folder that will hold the geotiffs created
+    Parameters
+    ----------
+    model_structure : str
+        Name of the model structure.
+    model : Pytorch model
+        Pretrained model structure with loaded weights.
+    filename : str
+        Name of the weights file.
+    tilenames : list
+        List of filenames of tiles to run through the model.
+    inputs_test_dim1 : str
+        Name of the first visualization type.
+    inputs_test_dim2 : str
+        Name of the second visualization type.
+    inputs_test_dim3 : str
+        Name of the third visualization type.
+    output_path : str
+        Path to the CNN_output/Model_predictions folder that will hold the geotiffs created.
 
-        Returns:
-            Nothing
-    """
+    Returns
+    -------
+    None.
+
+    '''
     
     # Check if the output folder exists and create a new one if it doesn't
     isExist = os.path.exists(output_path)
@@ -160,16 +185,21 @@ def predict_on_new_tiles(model_structure, model, filename, tilenames, inputs_tes
 
 def merge_tiles(pred_tiles_path, output_file):
     
-    """
+    '''
     Merge all the predicted geotiffs into one big geotiff
-    
-        Parameters:
-            pred_tiles_path (str): Path to the predicted geotiff tiles
-            output_file (str): Name of the big geotiff to create with the merged tiles
 
-        Returns:
-            Nothing
-    """
+    Parameters
+    ----------
+    pred_tiles_path : str
+        Path to the predicted geotiff tiles.
+    output_file : str
+        Name of the big geotiff to create with the merged tiles.
+
+    Returns
+    -------
+    None.
+
+    '''
     
     # Get a list of all the raster files ending with ".tif" in the input folder
     file_list = [f for f in os.listdir(pred_tiles_path) if f.endswith('.tif')]
@@ -205,20 +235,29 @@ def merge_tiles(pred_tiles_path, output_file):
     
 def import_and_load_model_weights(model_structure, device, backbone, weights_path, filename):
     
-    """
+    '''
     Import the model structure and its weights
     Load them and send them to the appropriate device
-    
-        Parameters:
-            model (Pytorch model): Pretrained model structure with loaded weights
-            device (str): Name of the device ("cuda" or "cpu") depending on the computer
-            backbone (str): Name of the backbone used to create the trained weights to import
-            weights_path (str): Path to the folder that holds the weights files or to the .pt file that holds the model weights directly
-            filename (str): Name of the weights file (if not already provided in weights_path). Can be None if it's included in weight_path.
 
-        Returns:
-            Pytorch model structure with loaded weights and already sent to the proper device.
-    """
+    Parameters
+    ----------
+    model_structure : str
+        Name of the model structure (e.g., "UNet", "MaskRCNN", "FasterRCNN").
+    device : str
+        Name of the device ("cuda" or "cpu") depending on the computer.
+    backbone : str
+        Name of the backbone used to create the trained weights to import.
+    weights_path : str
+        Path to the folder that holds the weights files or to the .pt file that holds the model weights directly.
+    filename : str
+        Name of the weights file (if not already provided in weights_path). Can be None if it's included in weight_path.
+
+    Returns
+    -------
+    model : Pytorch model
+        Pytorch model structure with loaded weights and already sent to the proper device..
+
+    '''
     
     # If a filename is provided (when called by main_with_metrics), use it to define the weights_path
     if filename != None:
@@ -244,27 +283,38 @@ def import_and_load_model_weights(model_structure, device, backbone, weights_pat
  
 def main_with_metrics(filename, cnn_output_path, data_path, separation_random, train_bounds, inputs_test, path_to_shp, threshold):
     
-    """
+    '''
     Call most of the functions above to:
         Load the model and its weights, and send to the appropriate device
         Set the model to eval mode
         Iterate through the testing dataset and run them through the model to create predictions, which are exported as geotiff tiles
         Merge all predicted tiles into one big raster saved as a geotiff, vectorize it and save it as a shapefile
         Use the provided shapefile of annotated objects to calculate the object-per-object metrics using the provided threshold
-    
-        Parameters:
-            filename (str): Name of pretrained file (weights) that holds metadata
-            cnn_output_path (str): Path to the CNN_output folder
-            data_path (str): Path to the CNN_input folder that holds the visuzliation tiles' folders
-            separation_random (bool): How the training/validation/testing datasets were separated. True for random, False for geographical
-            train_bounds (list): Geographical bounds of the training dataset if separation_random is set to False
-            inputs_test (list): List of the tile names that were set as testing dataset when running the model training (to keep the same)
-            path_to_shp (str): Path to the shapefile that holds the actual annotated objects to compare against the predictions.
-            threshold (int): All predicted polygons with area < that value will be deleted before calculating object-per-object metrics.
 
-        Returns:
-            Nothing
-    """
+    Parameters
+    ----------
+    filename : str
+        Name of pretrained file (weights) that holds metadata.
+    cnn_output_path : str
+        Path to the CNN_output folder.
+    data_path : str
+        Path to the CNN_input folder that holds the visuzliation tiles' folders.
+    separation_random : bool
+        How the training/validation/testing datasets were separated. True for random, False for geographical.
+    train_bounds : list
+        Geographical bounds of the training dataset if separation_random is set to False.
+    inputs_test : list
+        List of the tile names that were set as testing dataset when running the model training (to keep the same).
+    path_to_shp : str
+        Path to the shapefile that holds the actual annotated objects to compare against the predictions.
+    threshold : int
+        All predicted polygons with area < that value will be deleted before calculating object-per-object metrics.
+
+    Returns
+    -------
+    None.
+
+    '''
     
     # Define some local variables
     # The path where the predicted tiles will be saved using the information we have here
@@ -313,20 +363,26 @@ def main_with_metrics(filename, cnn_output_path, data_path, separation_random, t
 
 def main_without_metrics(path_to_weights_file, data_path):
     
-    """
+    '''
     Call most of the functions above to:
         Load the model and its weights, and send to the appropriate device
         Set the model to eval mode
         Iterate through the provided dataset and run them through the model to create predictions, which are exported as geotiff tiles
         Merge all predicted tiles into one big raster saved as a geotiff, vectorize it and save it as a shapefile
-    
-        Parameters:
-            path_to_weights_file (str): Path to the weights file that will be used (pretrained model)
-            data_path (str): Path to the CNN_input folder that holds the visuzliation tiles' folders
 
-        Returns:
-            Nothing
-    """
+    Parameters
+    ----------
+    path_to_weights_file : str
+        Path to the weights file that will be used (pretrained model).
+    data_path : str
+        Path to the CNN_input folder that holds the visuzliation tiles' folders.
+
+    Returns
+    -------
+    path_to_ras : str
+        Path to the raster created (if applicable). Used in the 03_predict_on_new_data.py script.
+
+    '''
     
     # Define some local variables using the information provided
     # Get the filename from the path to weights
