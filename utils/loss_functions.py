@@ -26,30 +26,43 @@ Therefore, torch.max(preds, 1)[1] == targets will return true when the index of 
 
 def compute_metrics(preds, targets):
     
-    """
-    Calculate the standard metrics by comparing the positive pixels in preds (predicted image) and targets (annotated mask of actual presence)
+    '''
+    Calculates the number of True Positives, False Positives, and False Negatives, which allows then calculating recall, precision, and F1
 
-        Parameters:
-            preds (Pytorch tensor): The tensor that holds predicted values (0: absence of object, 1: presence of object)
-            targets (Pytorch tensor): The tensor that holds the annotated mask (0: absence of object, 1: presence of object)
+    Parameters
+    ----------
+    preds : PyTorch array
+        Array of the predicted location of objects (predicted mask).
+    targets : PyTorch array
+        Location of the annotated objects to compare to (actual mask).
 
-        Returns:
-            recall (float): The ratio of actual pixels that are also predicted
-            precision (float): The ratio of predicted pixels that are also actual
-            f1 (float): The harmonic mean of recall and precision
-    """
+    Returns
+    -------
+    recall : double
+        Percentage of actual objects that are correctly predicted by the model.
+    precision : double
+        Percentage of predicted objects that are correct.
+    f1 : double
+        Hamornic mean of recall and precision.
+    mcc : double
+        Matthews Correlation Coefficient
+
+    '''
     
-    # Calculate the TP, FP, and FN
-    true_positives = torch.sum((targets == 1) & (torch.max(preds, 1)[1] == 1))
-    false_positives = torch.sum((targets == 0) & (torch.max(preds, 1)[1] == 1))
-    false_negatives = torch.sum((targets == 1) & (torch.max(preds, 1)[1] == 0))
+    TP = torch.sum((targets == 1) & (torch.max(preds, 1)[1] == 1))
+    TN = torch.sum((targets == 0) & (torch.max(preds, 1)[1] == 0))
+    FP = torch.sum((targets == 0) & (torch.max(preds, 1)[1] == 1))
+    FN = torch.sum((targets == 1) & (torch.max(preds, 1)[1] == 0))
     
-    # Calculate the standard metrics
-    recall = true_positives / (true_positives + false_negatives + 1e-7)
-    precision = true_positives / (true_positives + false_positives + 1e-7)
+    #print(f"TP: {TP}, TN: {TN}, FP: {FP}, FN: {FN}")
+    
+    # metrics
+    recall = TP / (TP + FN + 1e-7)
+    precision = TP / (TP + FP + 1e-7)
     f1 = (2 * recall * precision)/(recall + precision + 1e-7)
-    
-    return recall, precision, f1
+    mcc = (TP*TN-FP*FN)/torch.sqrt(float(TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
+    #print(f"recall: {recall}, precision: {precision}, f1: {f1}, mcc: {mcc}")
+    return recall, precision, f1, mcc
 
 # DEFINE THE LOSS FUNCTIONS
 
@@ -126,15 +139,46 @@ class IoULoss(nn.Module):
         return 1 - IoU
 
 def UnetLoss(preds, targets, loss_type):
+    '''
+    Calls the correct metrics function based on the needs.
+
+    Parameters
+    ----------
+    preds : PyTorch array
+        Array of the predicted location of objects (predicted mask).
+    targets : PyTorch array
+        Location of the annotated objects to compare to (actual mask).
+    loss_type : str
+        Name of the loss computed (can be focal, dice, or iou).
+
+    Returns
+    -------
+    loss (focal, dice, or iou) : double
+        Computed loss.
+    acc : double
+        Percentage of pixels correctly predicted.
+    recall : double
+        Percentage of actual objects that are correctly predicted by the model.
+    precision : double
+        Percentage of predicted objects that are correct.
+    f1 : double
+        Hamornic mean of recall and precision.
+    mcc : double
+        Matthews Correlation Coefficient
+
+    '''
+    
     acc = (torch.max(preds, 1)[1] == targets).float().mean()
-    recall, precision, f1 = compute_metrics(preds, targets)
+    recall, precision, f1, mcc = compute_metrics(preds, targets)
     
     if loss_type == "focal":
         focal_loss = FocalLoss()(preds, targets)
-        return focal_loss, acc, recall, precision, f1
+        return focal_loss, acc, recall, precision, f1, mcc
     if loss_type == "dice":
         dice_loss = DiceLoss()(preds, targets, smooth = 1)
-        return dice_loss, acc, recall, precision, f1
+        return dice_loss, acc, recall, precision, f1, mcc
     if loss_type == "iou":
         iou_loss = IoULoss()(preds, targets, smooth = 1)
-        return iou_loss, acc, recall, precision, f1
+        return iou_loss, acc, recall, precision, f1, mcc
+
+# THE END
