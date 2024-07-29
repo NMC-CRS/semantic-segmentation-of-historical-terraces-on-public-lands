@@ -16,16 +16,23 @@ from torchvision.models import VGG16_BN_Weights
 
 # Helper functions to simplify the code in the UNet itself
 def double_conv(in_channels, out_channels):
-    """
-    Defines the steps of the double convolutions layers (two convolutions, each followed by batch normalization and ReLU)
+    '''
+    Structure of a double convolution to simplify the code below
+    Each convolution is followed by a batch normalization and a ReLU function
 
-        Parameters:
-            in_channels (int): The number of channels of the input
-            out_channels (int): The number of channels produced by the convolution
+    Parameters
+    ----------
+    in_channels : int
+        The number of channels (dimension) of the input.
+    out_channels : int
+        The number of channels (dimension) of the output.
 
-        Returns:
-            Sequential (Pytorch function): A function that runs the input through the different steps sequentially
-    """
+    Returns
+    -------
+    Neural network sequential object
+        The sequence of transformations done on the input to creat the output.
+
+    '''
     
     return nn.Sequential(
         # First convolution, using 3x3 kernel with stride 1 and padding 1
@@ -44,16 +51,23 @@ def double_conv(in_channels, out_channels):
 
 
 def triple_conv(in_channels, out_channels):
-    """
-    Defines the steps of the triple convolutions layers (three convolutions, each followed by batch normalization and ReLU)
+    '''
+    Structure of a triple convolution to simplify the code below. 
+    Each convolution is followed by a batch normalization and a ReLU function
 
-        Parameters:
-            in_channels (int): The number of channels of the input
-            out_channels (int): The number of channels produced by the convolution
+    Parameters
+    ----------
+    in_channels : int
+        The number of channels (dimension) of the input.
+    out_channels : int
+        The number of channels (dimension) of the output.
 
-        Returns:
-            Sequential (Pytorch function): A function that runs the input through the different steps sequentially
-    """
+    Returns
+    -------
+    Neural network sequential object
+        The sequence of transformations done on the input to creat the output.
+
+    '''
     
     return nn.Sequential(
         nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
@@ -70,34 +84,29 @@ def triple_conv(in_channels, out_channels):
     )
 
 def up_conv(in_channels, out_channels):
-    """
-    Defines the step of the upsample (which is a convolutional transposition). This is used in the decoder to return the image to its original shape.
+    '''
+    Structure of the upward convolution to reduce the number of dimensions and increase the size
 
-        Parameters:
-            in_channels (int): The number of channels of the input
-            out_channels (int): The number of channels produced by the convolution
+    Parameters
+    ----------
+    in_channels : int
+        The number of channels (dimension) of the input.
+    out_channels : int
+        The number of channels (dimension) of the output.
 
-        Returns:
-            Sequential (Pytorch function): A function that runs the input through the different steps sequentially
-    """
+    Returns
+    -------
+    Neural network sequential object
+        The sequence of transformations done on the input to creat the output.
+
+    '''
     
     return nn.Sequential(
         nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)
         # UNet does not use ReLU here.
     )
 
-class UNet(nn.Module):
-    """
-    A Pytorch module that defines the steps of the UNet structure (encoder and decoder)
-
-        Parameters:
-            in_channels (int): The number of channels of the input
-            out_channels (int): The number of channels produced by the convolution
-
-        Returns:
-            x (Pytorch tensor): The tensor of predicted segmentations
-    """
-    
+class UNet(nn.Module):    
     def __init__(self, pretrained=True, out_channels=2):
         super(UNet, self).__init__()
 
