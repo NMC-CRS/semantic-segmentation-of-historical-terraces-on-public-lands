@@ -22,19 +22,28 @@ import numpy as np
 import pandas as pd
 
 def create_tile_bounds(largeraster, tilewidth, tileheight, xoffset = None, yoffset = None):
-    """
+    '''
     Given a GeoTIFF, return a geodataframe of a grid covering the entire extent with tiles of a user-specified size
 
-        Parameters:
-            largeraster (str): GeoTIFF file path
-            tilewidth (int): Integer of desired tile width
-            tileheight (int): Integer of desired tile height
-            xoffset (int): Optional, integer of desired x (easting) offset from origin
-            yoffset (int): Optional, integer of desired y (northin) offset from origin
+    Parameters
+    ----------
+    largeraster : str
+        GeoTIFF file path.
+    tilewidth : int
+        Integer of desired tile width.
+    tileheight : int
+        Integer of desired tile height.
+    xoffset : int, optional
+        Integer of desired x (easting) offset from origin. The default is None.
+    yoffset : int, optional
+        Integer of desired y (northin) offset from origin. The default is None.
 
-        Returns:
-            grid (GeoDataFrame): geopandas GDF of grid
-    """
+    Returns
+    -------
+    grid : GeoDataFrame
+        Geopandas GDF of grid.
+
+    '''
     
     # Load the raster and get some metadata from it
     img = rasterio.open(largeraster)
@@ -77,17 +86,23 @@ def create_tile_bounds(largeraster, tilewidth, tileheight, xoffset = None, yoffs
     return grid
 
 def join_and_save_overlapping_grids(grid_1, grid_2, path_out_shp):
-    """
-    This combines two given grids and saves the combined vector to the path provided
+    '''
+    Join two overlapping grids into one objects that is exported as a shapefile.
 
-        Parameters:
-            grid_1 (GeoDataFrame): geopandas GDF of grid
-            grid_2 (GeoDataFrame): geopandas GDF of grid
-            path_out_shp (str): Path to the saved grid
+    Parameters
+    ----------
+    grid_1 : GeoDataFrame
+        Geopandas dataframe of the first grid.
+    grid_2 : GeoDataFrame
+        Geopandas dataframe of the second (overlapping) grid.
+    path_out_shp : str
+        Path of the file that will be created (shapefile).
 
-        Returns:
-            Nothing 
-    """
+    Returns
+    -------
+    None.
+
+    '''
     
     # Join the two grids into one
     joined = pd.concat([grid_1.geometry, grid_2.geometry])
