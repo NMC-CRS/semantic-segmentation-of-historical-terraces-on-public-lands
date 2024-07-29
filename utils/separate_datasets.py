@@ -14,24 +14,36 @@ from sklearn.model_selection import train_test_split
 
 def separate_dataset(filenames, separation_random, train_bounds):
     
-    """
+    '''
     Separates the list from filenames into training and validation/testing datasets.
     If separation_random is set to True, the validation and testing datasets are different and each has 10% of the original datasets
     If separation_random is set to False, the training dataset is tiles within the train_bounds, and the rest is both validation and testing datasets (same dataset)
-    
-        Parameters:
-            filenames (list): List of tile names
-            separation_random (boolean): If the tiles are separated randomly (80-10-10) or not
-            train_bounds (list): xmin, ymin, xmax, and ymax around the tiles that will be used for training
-        Returns:
-            inputs_train (list): List of image tile names that are used for training
-            inputs_val (list): List of image tile names that are used for validation
-            inputs_test (list): List of image tile names that are used for testing
-            targets_train (list): List of mask tile names that are used for training (identical to inputs_train)
-            targets_val (list): List of mask tile names that are used for validation (identical to inputs_val)
-            targets_test (list):  List of mask tile names that are used for testing (identical to inputs_test)
 
-    """
+    Parameters
+    ----------
+    filenames : list
+        List of tile names.
+    separation_random : bool
+        If the tiles are separated randomly (80-10-10) or not.
+    train_bounds : list
+        xmin, ymin, xmax, and ymax around the tiles that will be used for training.
+
+    Returns
+    -------
+    inputs_train : list
+        List of image tile names that are used for training.
+    inputs_val : list
+        List of image tile names that are used for validation.
+    inputs_test : list
+        List of image tile names that are used for testing.
+    targets_train : list
+        List of mask tile names that are used for training (identical to inputs_train).
+    targets_val : list
+        List of mask tile names that are used for validation (identical to inputs_val).
+    targets_test : list
+        List of mask tile names that are used for testing (identical to inputs_test).
+
+    '''
     
     if separation_random:
 
