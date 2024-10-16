@@ -1,4 +1,4 @@
-# Semantic segmentation of historial terraces on public lands
+# Semantic segmentation of historical terraces on public lands
 ## Description
 This repository holds the code we used for our study of historical cotton terraces within the Piedmont National Wildlife Refuge (PNWR), Georgia, USA
 
