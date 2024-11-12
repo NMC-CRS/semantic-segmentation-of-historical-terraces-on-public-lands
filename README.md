@@ -1,6 +1,6 @@
 # Semantic segmentation of historical terraces on public lands
 ## Description
-This repository holds the code we used for our study of historical cotton terraces within the Piedmont National Wildlife Refuge (PNWR), Georgia, USA
+This repository holds the code we used for our study of historical cotton terraces within the Piedmont National Wildlife Refuge (PNWR), Georgia, USA, as well as a dummy dataset of annotated roads in the neighboring community of Juliette. This dummy dataset - which can be used to tile visualization and annotation rasters, and then train a model to recognize roads - should help users format their own dataset correctly.
 
 ![Location of PNWR](docs/Figure_1_PNWR.jpg)
 
@@ -10,7 +10,7 @@ The scripts allows training a UNet that can take 3 different pre-trained backbon
 The scripts included here require Python 3.10 maximum. This workflow uses the following packages: `pandas`, `rasterio`, `shapely`, `geopandas`, `matplotlib`, `scikit-learn`, `scikit-image`, `tensorboard`, `torch_snippets`, `albumentations`, `torchmetrics`, `pycocotools`, and `tifffile`.
 
 ## File organization
-These scripts require this specific file organization of input and output folders, as it uses hard-coded relative paths that follow this structure:
+These scripts require this specific file organization of input and output folders, as it uses hard-coded relative paths that follow this structure (see dummy dataset for example):
 
 ```bash
 ├── CNN_data
@@ -44,9 +44,9 @@ The scripts included in the **utils** folder cover the 3 main steps of the workf
 ### Create training tiles
 To create our training dataset, we first created different visualization maps from our LiDAR-derived DTM. Those maps covered the whole area of the Piedmont National Wildlife Refuge (PNWR). We also annotated the presence of terraces in QGIS, and transformed those annotations into a raster map where 0 represents the background and 1 represents buffers around terraces.
 
-We used the `create_overlapping_grid.py` script to create two overlapping grids using one of the visualization raster as a basemap to get the grids' extent. We created a 256x256 and a 512x512 grid. Both were saved in the **Grids** folder in **CNN_input**.
+We used the `create_overlapping_grid.py` script to create two overlapping grids using one of the visualization raster as a basemap to get the grids' extent. We created a 256x256 and a 512x512 grid. Both were saved in the **Grids** folder in **CNN_input**. *To ease replicability, we already include a 256 grid in the dummy_dataset folder structure, which covers the dummy area.*
 
-We then used the `tile_raster_from_grid.py` script to tile each of our visualization maps. The resulting tiles were separated into input folders with names that reflected the visualization. For example, 256x256 pixel tiles created from the SLRM map using 20m moving window were placed into a folder called **Input_SLRM20m_256** within the **CNN_input** folder, whereas the 512x512 tiles created from the slope map were saved into a folder called **Input_Slope_512**.
+We then used the `tile_raster_from_grid.py` script to tile each of our visualization maps. The resulting tiles were separated into input folders with names that reflected the visualization. For example, 256x256 pixel tiles created from the SLRM map using 20m moving window were placed into a folder called **Input_SLRM20m_256** within the **CNN_input** folder, whereas the 512x512 tiles created from the slope map were saved into a folder called **Input_Slope_512**. *In the dummy dataset, we include the tile folders, but they are empty, to save space and allow users to test the tiling script by themselves.*
 
 Similarly, we tiled the annotation mask using the same grids. The resulting tiles were placed in target folders with names that reflected their size and the buffer size around the objects. For example, the 256x256 tiles from the map with 20m buffers around terraces were saved in a folder called **Target_20m_256** within the **Terrace_masks** subfolder of **CNN_input**.
 
@@ -67,7 +67,7 @@ The script then imports the pre-trained backbone chosen by the user (VGG16, VGG1
 
 It calls the `set_lr_parameters.py` script to set the learning rate of the model parameters that will learn to a starting rate of 0.001 and set learning rate of the frozen parameters to 0. It also calls the `loss-functions.py` script which defines the loss function used to improve training.
 
-When all of these pre-processing steps are done, the script created a ***filename*** variable and prints it to the Console. This variable holds the name that will be used to save weights if necessary, as well as to create prediction maps in the 3rd step of the workflow. This name holds a lot of information in a specific order, which can be automatically parsed:
+When all of these pre-processing steps are done, the script creates a ***filename*** variable and prints it to the Console. This variable holds the name that will be used to save weights if necessary, as well as to create prediction maps in the 3rd step of the workflow. This name holds a lot of information in a specific order, which can be automatically parsed:
 
 `UNet_{backbone}_{n_epochs}ep_{buffer_size}m_{loss_fun}_{batch_size}bs_{lr_type}_{vis1}_{vis2}_{vis3}_{threshold}Thresh_{im_size}_{time_stamp}`
 
@@ -89,7 +89,7 @@ Therefore, the filename ***UNet_VGG16_20ep_5m_iou_8bs_lrVariable_SLRM20m_SLRM10m
 
 At that point, the script calls its `train_model` functions, which loads the training tiles, pre-processes them by combining the 3 visualizations into a 3-band tile and using augmentations of it and its associated mask. It compares its predictions to the actual masks to compute the loss, and goes back through its parameters to update their weights in order to diminish that loss. It then loads the validation tiles and pre-processes them (no augmentation for validation tiles, however) and runs them through the model to compute validation metrics. The `train_model` function does this loop for as many epochs as provided by the user.
 
-Finally, the script calls its `test_model` function, which runs the testing dataset through the trained model and computes metrics from it. If the user has decided to save the weights of that model, this is done after that step.
+Finally, the script calls its `test_model` function, which runs the testing dataset through the trained model and computes metrics from it. If the user has decided to save the weights of that model, this is done after that step. The weights file is saved in the **CNN_output/Model_weights** folder.
 
 #### Metrics calculated
 In these scripts, we calculate the same metrics for training, validation, and testing datasets:
