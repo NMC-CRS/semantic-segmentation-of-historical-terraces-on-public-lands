@@ -34,7 +34,6 @@ import calculate_metrics
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def preprocess(image_dim1, image_dim2, image_dim3):
-    
     '''
     Combine the 3 dimensions provided into a 3D array, transform into a tensor, and format its dimensions appropriately for the model
 
@@ -54,6 +53,7 @@ def preprocess(image_dim1, image_dim2, image_dim3):
 
     '''
     
+    
     # This is a torchvision transform to transform the numpy array into a Pytorch tensor
     tfms = transforms.Compose([
         transforms.ToTensor()
@@ -67,7 +67,7 @@ def preprocess(image_dim1, image_dim2, image_dim3):
     im = im.unsqueeze(0) 
     
     # Return the pytorch tensor
-    return(im)
+    return im
 
 def postprocess_UNet(mask):
         
@@ -337,14 +337,6 @@ def main_with_metrics(filename, cnn_output_path, data_path, separation_random, t
     # Set the model to eval to avoid training it again.
     model.eval()
     
-    # Print a disclaimer on object-per-object metrics if separation is random
-    if separation_random:
-        print("\n**IMPORTANT**: The object-per-object metrics may not be accurate because the randomly selected testing dataset does not cover the full extent of the annotated map.\n")
-    # If separation is geographic, this overwrites the inputs_test dataset with the tiles around the 
-    else:
-        filenames = os.listdir(f'{data_path}/Input_{vis1}_{im_size}')
-        inputs_train, inputs_val, inputs_test, targets_train, targets_val, targets_test = separate_dataset(filenames, separation_random, train_bounds)
-
     # Add paths to datasets so the model knows where to look
     train_dir_dim1 = os.path.join(data_path, f'Input_{vis1}_{im_size}')
     train_dir_dim2 = os.path.join(data_path, f'Input_{vis2}_{im_size}')
