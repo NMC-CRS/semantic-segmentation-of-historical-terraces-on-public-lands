@@ -535,24 +535,24 @@ def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folde
 
 # PRACTICE CODE
 
-filename, inputs_test = main(backbone = "VGG16",
-     vis1 = "Slope",
-     vis2 = "PosOp",
-     vis3 = "TRI", 
-     im_size = 256,
-     buffer_size = 20,
-     data_path = '''REPLACE WITH PATH TO CNN_input FOLDER''',
-     mask_folder_name = "Terrace_masks",
-     threshold = 1000,
-     batch_size = 8,
-     separation_random = False,
-     train_bounds = [0, 1, 0, 1],
-     n_epochs = 2,
-     loss_fun = "iou",
-     log_metrics = True,
-     save_weights = True,
-     output_path = '''REPLACE WITH PATH TO CNN_output FOLDER''',
-     lr_variable = False, 
-     remove_overlap = True)
+# filename, inputs_test = main(backbone = "VGG16",
+#      vis1 = "Slope",
+#      vis2 = "PosOp",
+#      vis3 = "TRI", 
+#      im_size = 256,
+#      buffer_size = 20,
+#      data_path = '''REPLACE WITH PATH TO CNN_input FOLDER''',
+#      mask_folder_name = "Terrace_masks",
+#      threshold = 1000,
+#      batch_size = 8,
+#      separation_random = False,
+#      train_bounds = [0, 1, 0, 1],
+#      n_epochs = 2,
+#      loss_fun = "iou",
+#      log_metrics = True,
+#      save_weights = True,
+#      output_path = '''REPLACE WITH PATH TO CNN_output FOLDER''',
+#      lr_variable = False, 
+#      remove_overlap = True)
 
 # THE END
