@@ -11,20 +11,43 @@ If the separtion is geographic, it uses the train_bound to separate the datasets
 """
 
 from sklearn.model_selection import train_test_split
+import re
+
+def extract_numbers_from_tile_format(s):
+    '''
+    Extracts the two coordinates from a tile name only if its name has the correct format
+
+    Parameters
+    ----------
+    s : str
+        This should be the name of the tile
+
+    Returns
+    -------
+    bool
+        Returns a list of the two numbers in the tile name if it has the proper format, and None if it doesn't.
+
+    '''
+
+    pattern = r'^Tile(\d+)_(\d+)\.tif$'
+    match = re.match(pattern, s)
+    if match:
+        return match.groups()
+    else:
+        return None
 
 def separate_dataset(filenames, separation_random, train_bounds):
-    
     '''
     Separates the list from filenames into training and validation/testing datasets.
-    If separation_random is set to True, the validation and testing datasets are different and each has 10% of the original datasets
-    If separation_random is set to False, the training dataset is tiles within the train_bounds, and the rest is both validation and testing datasets (same dataset)
+    If separation_random is set to True, the training dataset includes ~80% of the dataset, whereas the validation and testing datasets each have ~10% of the original datasets
+    If separation_random is set to False, the training dataset includes tiles within the train_bounds, and the rest is divided into validation and testing datasets based on the mean X coordinates of the remaining tiles.
 
     Parameters
     ----------
     filenames : list
         List of tile names.
     separation_random : bool
-        If the tiles are separated randomly (80-10-10) or not.
+        If the tiles are separated randomly (~80-10-10) or not.
     train_bounds : list
         xmin, ymin, xmax, and ymax around the tiles that will be used for training.
 
@@ -36,12 +59,6 @@ def separate_dataset(filenames, separation_random, train_bounds):
         List of image tile names that are used for validation.
     inputs_test : list
         List of image tile names that are used for testing.
-    targets_train : list
-        List of mask tile names that are used for training (identical to inputs_train).
-    targets_val : list
-        List of mask tile names that are used for validation (identical to inputs_val).
-    targets_test : list
-        List of mask tile names that are used for testing (identical to inputs_test).
 
     '''
     
@@ -50,21 +67,19 @@ def separate_dataset(filenames, separation_random, train_bounds):
         # Set the random seed to make sure that we separate the paired input-targets similarly.
         random_seed = 42
         
-        # Split dataset into training, validation, and testing set
-        train_size = 0.8  # 80:10:10 split
+        # Split dataset into training and validation
+        train_size = 0.80  # 80:20 split at first
         
         # Randomly put the list of file names into their respective lists *80% in training and 20% in validation).
-        inputs_train, inputs_val, targets_train, targets_val = train_test_split(
-            filenames,
+        inputs_train, inputs_val = train_test_split(
             filenames,
             random_state = random_seed,
             train_size = train_size,
             shuffle = True)
         
-        # Further separate the validation dataset in two (50% validation and 5% testing)
-        inputs_val, inputs_test, targets_val, targets_test = train_test_split(
+        # Further separate the validation dataset in two (50% validation and 50% testing)
+        inputs_val, inputs_test = train_test_split(
             inputs_val,
-            targets_val,
             random_state = random_seed,
             train_size = 0.5,
             shuffle = True)
@@ -72,31 +87,40 @@ def separate_dataset(filenames, separation_random, train_bounds):
     else:
         # Create empty lists that will take the appropriate filenames
         inputs_train = []
-        inputs_val = []
-        inputs_test = []
+        inputs_val_temp = []
         
         # Iterate through all filenames (tiles)
         for file in filenames:
             
-            # Get the coordinates of each file (lower left anchor) from their name
-            file_cleaned = file.removeprefix("Tile").removesuffix(".tif")
-            file_split = file_cleaned.split("_")
-            y_orig = float(file_split[1])
-            x_orig = float(file_split[0])
+            coord = extract_numbers_from_tile_format(file)
             
-            # Add the filename to its appropriate list based on its coordinates, compared to the train_bounds provided
-            # Every tile within the train_bounds goes into the training dataset, everything else goes in both validation and testing datasets
-            if x_orig >= train_bounds[0] and y_orig >= train_bounds[1] and x_orig < train_bounds[2] and y_orig < train_bounds[3]:
-                inputs_train.append(file)
+            if coord is None:
+                
+                print(f"\n'{file}' (in your first vis input tiles' folder) has an incorrect name (corrupt copy?). It has been ignored, but you should still delete it.")
+                pass
+            
             else:
-                inputs_val.append(file)
-                inputs_test.append(file)
+                # Get the coordinates of each file (lower left anchor) from their name
+                y_orig = float(coord[1])
+                x_orig = float(coord[0])
+                
+                # Add the filename to its appropriate list based on its coordinates, compared to the train_bounds provided
+                # Every tile within the train_bounds goes into the training dataset, everything else goes in both validation and testing datasets
+                if x_orig >= train_bounds[0] and y_orig >= train_bounds[1] and x_orig < train_bounds[2] and y_orig < train_bounds[3]:
+                    inputs_train.append(file)
+                else:
+                    inputs_val_temp.append(file)
         
-        # Because the entities separated are filenames, they are the same for inputs and targets, so we can simply copy the lists.
-        targets_train = inputs_train
-        targets_val = inputs_val
-        targets_test = inputs_test
+        # Calculate the mean X-coordinate
+        coords = [extract_numbers_from_tile_format(filename) for filename in inputs_val_temp]
+        x_coords = [int(coord[0]) for coord in coords]
+        mean_x = sum(x_coords) / len(x_coords)
         
-    return inputs_train, inputs_val, inputs_test, targets_train, targets_val, targets_test
+        # Split the filenames into two lists based on the mean X-coordinate
+        inputs_val = [filename for filename in inputs_val_temp if int(extract_numbers_from_tile_format(filename)[0]) < mean_x]
+        inputs_test = [filename for filename in inputs_val_temp if int(extract_numbers_from_tile_format(filename)[0]) >= mean_x]
+    
+    # Return the three list of tile names
+    return inputs_train, inputs_val, inputs_test
 
 # THE END
