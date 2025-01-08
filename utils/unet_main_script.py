@@ -17,6 +17,8 @@ from torch.utils.data import DataLoader
 from torch_snippets import Report
 from torch.optim.lr_scheduler import ReduceLROnPlateau # Addition to adjust lr
 
+import pandas as pd
+
 import os
 
 from datetime import datetime
@@ -35,6 +37,7 @@ import dset_rgb
 import transformations_rgb as A
 import separate_datasets as sepdata
 import set_lr_parameters as setlr
+import clean_datasets as clean
     
 def import_backbone(backbone):
     
@@ -241,7 +244,7 @@ def train_model(model, n_epochs, loss_fun, lr_variable, trn_dl, val_dl, criterio
     
     return
 
-def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, inputs_test, targets_test, backbone, batch_size):
+def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, inputs_test, backbone, batch_size):
     '''
     This iterates through the testing dataset (image and targets). It runs them through the trained model in batches, and computes metrics on the model predictions.
 
@@ -259,8 +262,6 @@ def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, 
         Path to the mask tiles.
     inputs_test : list
         List of the filenames of the testing dataset.
-    targets_test : list
-        List of the filenames of the testing dataset (same as inputs_test, but different name here for code clarity).
     backbone : str
         The name of the backbone to use.
     batch_size : int
@@ -276,7 +277,7 @@ def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, 
     inputs_test_dim1 = [f'{train_dir_dim1}/{item}' for item in inputs_test] 
     inputs_test_dim2 = [f'{train_dir_dim2}/{item}' for item in inputs_test] 
     inputs_test_dim3 = [f'{train_dir_dim3}/{item}' for item in inputs_test] 
-    targets_test = [f'{mask_dir}/{item}' for item in targets_test] 
+    targets_test = [f'{mask_dir}/{item}' for item in inputs_test] 
 
     # Workflow to format and upload the testing data 
     tst_ds = dset_rgb.SegData(inputs_test_dim1, inputs_test_dim2, inputs_test_dim3, targets_test, backbone)
@@ -299,9 +300,6 @@ def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, 
             
             # Run the tiles through the model
             _mask = model(im)
-    
-            # Format the target correctly for the compute_metrics function
-            mask = mask.squeeze()
     
             # Calculate metrics between predicted and actual
             recall, precision, f1, mcc = lf.compute_metrics(_mask, mask)
@@ -329,7 +327,7 @@ def test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, 
     
     return 
 
-def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folder_name, threshold, batch_size, separation_random, train_bounds, n_epochs, loss_fun, log_metrics, save_weights, output_path, lr_variable):
+def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folder_name, threshold, batch_size, separation_random, train_bounds, n_epochs, loss_fun, log_metrics, save_weights, output_path, lr_variable, remove_overlap):
     
     '''
     Calls all the functions to load the model structure and its backbone, format the different datasets, train the model, evaluate it, and test it.
@@ -373,6 +371,8 @@ def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folde
         Path to the CNN_output folder in which the predicted tiles, compiled tiff, compiled shapefiles will be saved.
     lr_variable : bool
         If the learning rate is updating when val_loss stagnates (True) or kept constant at 0.001 (False).
+    remove_overlap : bool
+        If we clean the datasets to remove any overlap between them
 
     Returns
     -------
@@ -409,25 +409,37 @@ def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folde
     filtered_df = tiles_table[tiles_table['min_nonzero'] > threshold]
     filenames = filtered_df['filename'].values.tolist()
 
-    print(f"\nUsing {len(filenames)} tiles with objects in them.")
-    
     # Assign tiles to training or validation/testing datasets
-    inputs_train, inputs_val, inputs_test, targets_train, targets_val, targets_test = sepdata.separate_dataset(filenames, separation_random, train_bounds)
+    inputs_train, inputs_val, inputs_test = sepdata.separate_dataset(filenames, separation_random, train_bounds)
 
-    print(f"Out of the {len(filenames)} tiles, {len(inputs_train)} are for training, {len(inputs_val)} are for validation, and {len(inputs_test)} for testing.")
+    if remove_overlap:
+        ## Clean the datasets
+        # Calculate the min_distance based on the resolution and im_size
+        min_distance = clean.calculate_min_distance(f'{train_dir_dim1}/{inputs_train[0]}')
+        
+        # Use that min_distance to clean overlapping tiles
+        inputs_train, inputs_val = clean.clean_overlapping_tiles(inputs_train, inputs_val, min_distance)
+        inputs_train, inputs_test = clean.clean_overlapping_tiles(inputs_train, inputs_test, min_distance)
+        inputs_val, inputs_test = clean.clean_overlapping_tiles(inputs_val, inputs_test, min_distance)
+
+    # Calculate the number of cleaned tiles used.
+    n_tiles_used = len(inputs_train) + len(inputs_val) + len(inputs_test)
+
+    print(f"\nUsing {n_tiles_used} tiles with objects in them.")
+    print(f"Out of the {n_tiles_used} tiles, {len(inputs_train)}({round(len(inputs_train)/n_tiles_used, 2)}) are for training, {len(inputs_val)}({round(len(inputs_val)/n_tiles_used,2)}) are for validation, and {len(inputs_test)}({round(len(inputs_test)/n_tiles_used,2)}) for testing.")
 
     # Add the paths to the filenames in each category
     # TRAINING
     inputs_train_dim1 = [f'{train_dir_dim1}/{item}' for item in inputs_train] 
     inputs_train_dim2 = [f'{train_dir_dim2}/{item}' for item in inputs_train] 
     inputs_train_dim3 = [f'{train_dir_dim3}/{item}' for item in inputs_train] 
-    targets_train = [f'{mask_dir}/{item}' for item in targets_train] 
+    targets_train = [f'{mask_dir}/{item}' for item in inputs_train] 
 
     # VALIDATION
     inputs_val_dim1 = [f'{train_dir_dim1}/{item}' for item in inputs_val] 
     inputs_val_dim2 = [f'{train_dir_dim2}/{item}' for item in inputs_val] 
     inputs_val_dim3 = [f'{train_dir_dim3}/{item}' for item in inputs_val] 
-    targets_val = [f'{mask_dir}/{item}' for item in targets_val] 
+    targets_val = [f'{mask_dir}/{item}' for item in inputs_val] 
     
     # CREATE THE DATALOADER
 
@@ -500,7 +512,18 @@ def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folde
     '''
 
     # Evaluate on testing dataset
-    test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, inputs_test, targets_test, backbone, batch_size)
+    test_model(model, train_dir_dim1, train_dir_dim2, train_dir_dim3, mask_dir, inputs_test, backbone, batch_size)
+
+    # Get the list of test tiles' paths for the polygons.
+    inputs_test_dim1 = [f'{train_dir_dim1}/{item}' for item in inputs_test]
+    # Create a polygon that represents each dataset and write to disk
+    gdf_train_polygons = clean.create_poly_from_tiles(inputs_train_dim1, "Training")
+    gdf_val_polygons = clean.create_poly_from_tiles(inputs_val_dim1, "Validation")
+    gdf_test_polygons = clean.create_poly_from_tiles(inputs_test_dim1, "Testing")
+
+    # Join the geodatabases of dataset areas and export to disk
+    joined_gdf = pd.concat([gdf_train_polygons, gdf_val_polygons, gdf_test_polygons])
+    joined_gdf.to_file(f"{output_path}/Model_predictions/{filename}_areas.gpkg", driver="GPKG")
 
     if save_weights:
         # To save the model's trained weights
