@@ -25,9 +25,10 @@ from skimage.io import imread
 import numpy as np
 from torchvision import transforms
 
+import geopandas as gpd
+
 # Import helper functions already created
 from unet_main_script import import_backbone
-from separate_datasets import separate_dataset
 import calculate_metrics
 
 # Define which device to use based on the computer
@@ -348,8 +349,15 @@ def main_with_metrics(filename, cnn_output_path, data_path, separation_random, t
     # Merge the predicted tiles to create one raster
     merge_tiles(pred_tiles_path, path_to_ras)
     
+    # Vectorize the raster
+    pred_poly = calculate_metrics.vectorize(path_to_ras)
+    
+    # Import the testing polygon (filtered from the areas gdf)
+    area_polys = gpd.read_file(rf'{cnn_output_path}/Model_predictions/{filename}_areas.gpkg')
+    test_poly = area_polys[area_polys['data_type'] == "Testing"]
+    
     # Calculate the metrics on the new predicted raster
-    calculate_metrics.compute_metrics(path_to_shp, path_to_ras, threshold)
+    calculate_metrics.compute_object_metrics(path_to_shp, test_poly, pred_poly, threshold)
     
     return
 
@@ -421,5 +429,20 @@ def main_without_metrics(path_to_weights_file, data_path):
     calculate_metrics.vectorize(path_to_ras)
     
     return path_to_ras
+
+# # PRACTICE CODE
+# # To calculate object-by-object metrics on the testing tiles
+# main_with_metrics(filename = 'UNet_VGG16_2ep_20m_iou_8bs_lrStable_Slope_PosOp_TRI_1000Thresh_256_1736361816', 
+#                   cnn_output_path = '''REPLACE WITH PATH TO CNN_output FOLDER''', 
+#                   data_path = '''REPLACE WITH PATH TO CNN_input FOLDER''', 
+#                   separation_random = False, 
+#                   train_bounds = [0, 1, 0, 1], 
+#                   inputs_test = inputs_test, # This is the list that gets returned by the unet_main.py's main function
+#                   path_to_shp = '''REPLACE WITH PATH TO ANNOTATION SHAPEFILE/GEOPACKAGE FILE''', 
+#                   threshold = 1600)
+
+# # To apply the trained model onto new data, for which you do not have annotations to compare to.
+# main_without_metrics(path_to_weights_file = '''REPLACE WITH PATH TO SAVED WEIGHTS FILE''', 
+#                      data_path = '''REPLACE WITH PATH TO CNN_data FOLDER''')
 
 # THE END
