@@ -73,11 +73,6 @@ class SegData(Dataset):
         # Keep only one dimension from the mask (same code as for tensors)
         mask = mask.astype(np.int16) 
         
-        if self.transform is not None:
-            if self.backbone[0] == "R":
-                # This adds one dimensions for smp package (adds at the end so that its shape is HWC) but just for ResNet backbones
-                mask = np.expand_dims(mask, 2)
-        
         # Transformations
         # Feeding both image and mask to transform makes sure that the pair (image-mask) is transformed the same way
         if self.transform is not None:
@@ -88,10 +83,7 @@ class SegData(Dataset):
             if self.backbone[0] == "V":
                 # Sets the image type to floats16 (just for VGG)
                 image = np.float16(image)
-            else:
-                mask = mask.transpose(2, 0, 1).astype('float32') # this reworks the dimensions of the mask to fit what is required by ResNet structure
 
-        # Return the formatted image and associated mask
         return image, mask
 
     # Function called by dataloader
