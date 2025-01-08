@@ -73,7 +73,7 @@ def vectorize(rasterpath):
     return features_gdf
 
 # Define the main helper function, which also calls vectorize() (defined above)
-def compute_object_metrics(path_to_shp, pred_poly, threshold):
+def compute_object_metrics(path_to_shp, test_poly, pred_poly, threshold):
     '''
     Given a shapefile of actual features, a raster of predicted features,
     and an integer threshold for feature size, prints the recall, precision, and F1 values.
@@ -82,6 +82,8 @@ def compute_object_metrics(path_to_shp, pred_poly, threshold):
     ----------
     path_to_shp : str
         filepath for shapefile of actual features.
+    test_poly: Geopandas vector
+        Area encompassing all the testing tiles
     pred_poly : GeoPandas vector
         Imported shapefile of predicted polygons (can be bounding boxes for Mask and Faster RCNN).
     threshold : int
@@ -89,12 +91,28 @@ def compute_object_metrics(path_to_shp, pred_poly, threshold):
 
     Returns
     -------
-    None.
+    TP : int
+        Number of true positives (annotations correctily predicted by the model)
+    FN : int
+        Number of False negatives (annotations not predicted by the model)
+    FP : int
+        Numer of False positives (predictions that do not represent true presence)
+    recall : float
+        The percentage of annotations correctly predicted by the model
+    precision : float
+        The percentage of model predictions that are correct
+    f1 : float
+        The harmonic mean of recall and precision
 
     '''
 
     # Read in shapefile of predicted features
     actual = gpd.read_file(path_to_shp)
+
+    # Clip the annotated vectors
+    if test_poly is not None:
+        clipped_actual = gpd.clip(actual, test_poly)
+        actual = clipped_actual
 
     # Filter out the smaller polygons using input area threshold
     pred_poly = pred_poly[pred_poly.area > threshold]
@@ -132,6 +150,8 @@ def compute_object_metrics(path_to_shp, pred_poly, threshold):
     print("Recall:", round(recall, 3))
     print("Precision:", round(precision, 3))
     print("F1:", round(F1, 3))
+    
+    return TP, FN, FP, recall, precision, F1
 
 #Define an alternate helper function, which saves metrics to a list
 def save_metrics(path_to_shp, path_to_ras, threshold):
