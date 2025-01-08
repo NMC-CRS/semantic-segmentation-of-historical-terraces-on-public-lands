@@ -517,6 +517,7 @@ def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folde
     # Get the list of test tiles' paths for the polygons.
     inputs_test_dim1 = [f'{train_dir_dim1}/{item}' for item in inputs_test]
     # Create a polygon that represents each dataset and write to disk
+    print("Create training polygon")
     gdf_train_polygons = clean.create_poly_from_tiles(inputs_train_dim1, "Training")
     gdf_val_polygons = clean.create_poly_from_tiles(inputs_val_dim1, "Validation")
     gdf_test_polygons = clean.create_poly_from_tiles(inputs_test_dim1, "Testing")
@@ -531,5 +532,27 @@ def main(backbone, vis1, vis2, vis3, im_size, buffer_size, data_path, mask_folde
     
     # Return the filename (holds lots of metadata) and the inputs_test list, which can be used to create a map of predictions on test data
     return filename, inputs_test
+
+# PRACTICE CODE
+
+filename, inputs_test = main(backbone = "VGG16",
+     vis1 = "Slope",
+     vis2 = "PosOp",
+     vis3 = "TRI", 
+     im_size = 256,
+     buffer_size = 20,
+     data_path = '''REPLACE WITH PATH TO CNN_input FOLDER''',
+     mask_folder_name = "Terrace_masks",
+     threshold = 1000,
+     batch_size = 8,
+     separation_random = False,
+     train_bounds = [0, 1, 0, 1],
+     n_epochs = 2,
+     loss_fun = "iou",
+     log_metrics = True,
+     save_weights = True,
+     output_path = '''REPLACE WITH PATH TO CNN_output FOLDER''',
+     lr_variable = False, 
+     remove_overlap = True)
 
 # THE END
