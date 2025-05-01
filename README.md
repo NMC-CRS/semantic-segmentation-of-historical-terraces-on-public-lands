@@ -116,4 +116,4 @@ For support, contact one of the authors of this repository (see below) or open a
 **Authors:**\
 Claudine Gravel-Miguel, PhD\
 Grant Snitker, PhD\
-Katherine Peck, MA
+Katherine Peck, MS
