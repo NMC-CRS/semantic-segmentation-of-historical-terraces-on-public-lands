@@ -81,7 +81,7 @@ When all of these pre-processing steps are done, the script creates a ***filenam
 * **vis1**: The name of the first visualization used
 * **vis2**: The name of the second visualization used
 * **vis3**: The name of the third visualization used
-* **threshold**: Post-processing threshold (for 3rd step) that will automatically remove predicted objects smaller than this given value
+* **threshold**: Pre-processing threshold. The model automatically ignores training tiles with fewer positive pixels than this value
 * **im_size**: Size (height and width) of the training tiles
 * **time_stamp**: Unique time stamp that ensures trainings run with the same parameters will not overwrite previous runs
 
